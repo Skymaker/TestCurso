@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Editor de Exámenes</title>
+  <style>
+    :root {
+      --primary:#2563eb; --primary-dark:#1d4ed8; --danger:#dc2626; --success:#16a34a;
+      --line:#d1d5db; --text:#111827; --muted:#6b7280; --surface:#fff; --bg:#f3f4f6;
+      --radius:10px; --shadow:0 4px 18px rgba(0,0,0,0.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:Arial,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;}
+    .page{width:min(960px,calc(100% - 16px));margin:16px auto;display:grid;gap:14px;}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
+    .app-header{padding:18px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:3px solid var(--primary);}
+    .app-header h1{font-size:1.15rem;color:var(--primary);}
+    .app-header p{font-size:0.82rem;color:var(--muted);}
+    .section{padding:20px 22px;}
+    .section-title{font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .field{display:grid;gap:5px;}
+    .field label{font-size:0.82rem;font-weight:700;color:var(--muted);}
+    .field input,.field textarea,.field select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:0.95rem;background:#fafafa;transition:border-color .2s;font-family:inherit;}
+    .field input:focus,.field textarea:focus{outline:none;border-color:var(--primary);}
+    .field textarea{resize:vertical;min-height:68px;}
+    .logo-zone{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+    .logo-preview{width:100px;height:60px;border:1px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;background:#f9f9f9;overflow:hidden;flex-shrink:0;}
+    .logo-preview img{max-width:100%;max-height:100%;object-fit:contain;}
+    .logo-preview span{font-size:0.72rem;color:var(--muted);text-align:center;padding:4px;}
+    button{border:0;border-radius:8px;padding:10px 16px;font-weight:700;font-size:0.9rem;cursor:pointer;transition:background .15s;touch-action:manipulation;}
+    .btn-primary{background:var(--primary);color:#fff;}
+    .btn-primary:hover{background:var(--primary-dark);}
+    .btn-success{background:var(--success);color:#fff;}
+    .btn-success:hover{background:#15803d;}
+    .btn-danger{background:var(--danger);color:#fff;}
+    .btn-danger:hover{background:#b91c1c;}
+    .btn-ghost{background:#e5e7eb;color:var(--text);border:1px solid var(--line);}
+    .btn-ghost:hover{background:#d1d5db;}
+    .btn-sm{padding:7px 12px;font-size:0.82rem;}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .q-list{display:grid;gap:12px;}
+    .q-card{border:1px solid var(--line);border-radius:8px;background:#fafafa;overflow:hidden;}
+    .q-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f1f5f9;border-bottom:1px solid var(--line);gap:10px;cursor:pointer;user-select:none;}
+    .q-head-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+    .q-num{font-size:0.78rem;font-weight:700;background:var(--primary);color:#fff;border-radius:999px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .q-summary{font-size:0.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
+    .q-chevron{font-size:1rem;color:var(--muted);transition:transform .2s;flex-shrink:0;}
+    .q-body{padding:14px;display:grid;gap:12px;}
+    .q-body.collapsed{display:none;}
+    .opts-list{display:grid;gap:8px;}
+    .opt-row{display:flex;gap:8px;align-items:center;}
+    .opt-letter{font-size:0.82rem;font-weight:700;width:20px;flex-shrink:0;color:var(--muted);}
+    .opt-row input[type=text]{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font-size:0.9rem;background:#fff;}
+    .opt-row input[type=text]:focus{outline:none;border-color:var(--primary);}
+    .opt-correct{width:20px;height:20px;flex-shrink:0;accent-color:var(--success);cursor:pointer;}
+    .opt-del{background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;padding:2px 6px;border-radius:4px;}
+    .opt-del:hover{color:var(--danger);background:#fee2e2;}
+    .correct-hint{font-size:0.72rem;color:var(--muted);margin-top:2px;}
+    /* CAMPOS DEL ALUMNO */
+    .fields-list{display:grid;gap:8px;}
+    .field-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fafafa;flex-wrap:wrap;}
+    .field-row.disabled-row{opacity:.45;}
+    .field-name{flex:1;min-width:120px;font-size:.9rem;font-weight:600;}
+    .field-name-input{width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:.88rem;background:#fff;font-family:inherit;}
+    .field-name-input:focus{outline:none;border-color:var(--primary);}
+    .field-toggle{display:flex;align-items:center;gap:5px;font-size:.8rem;color:var(--muted);white-space:nowrap;}
+    .field-toggle input{accent-color:var(--primary);}
+    .field-req{display:flex;align-items:center;gap:5px;font-size:.8rem;color:var(--muted);white-space:nowrap;}
+    .field-req input{accent-color:var(--success);}
+    .custom-badge{font-size:.68rem;background:#e0e7ff;color:#3730a3;border-radius:999px;padding:2px 7px;font-weight:700;flex-shrink:0;}
+    .import-zone{border:2px dashed var(--line);border-radius:10px;padding:24px;text-align:center;transition:border-color .2s;background:#fafafa;cursor:pointer;}
+    .import-zone:hover{border-color:var(--primary);background:#eff6ff;}
+    .import-zone input{display:none;}
+    .import-zone p{font-size:0.88rem;color:var(--muted);margin-top:6px;}
+    #toast{position:fixed;bottom:24px;right:24px;background:#1f2937;color:#fff;padding:12px 20px;border-radius:10px;font-size:0.88rem;font-weight:600;opacity:0;transition:opacity .3s;z-index:999;pointer-events:none;max-width:280px;}
+    #toast.show{opacity:1;}
+
+    /* MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s;}
+    .modal-overlay.open{opacity:1;pointer-events:all;}
+    .modal-box{background:#fff;border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.18);padding:28px 28px 22px;width:min(420px,calc(100% - 32px));display:grid;gap:16px;}
+    .modal-box h2{font-size:1rem;color:var(--primary);font-weight:700;}
+    .modal-box p{font-size:.85rem;color:var(--muted);}
+    .modal-input-row{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fafafa;}
+    .modal-input-row input{flex:1;padding:10px 12px;border:none;outline:none;font-size:.95rem;background:transparent;font-family:inherit;}
+    .modal-input-row span{padding:10px 12px;background:#f0f0f0;color:var(--muted);font-size:.88rem;border-left:1px solid var(--line);white-space:nowrap;}
+    .modal-btn-row{display:flex;gap:10px;justify-content:flex-end;}
+    .modal-btn-row button{width:auto;padding:9px 20px;font-size:.9rem;}
+    @media(max-width:640px){
+      .grid2{grid-template-columns:1fr;}
+      .app-header{flex-direction:column;align-items:flex-start;}
+    }
+  </style>
+</head>
+<body>
+<main class="page">
+
+  <!-- CABECERA -->
+  <div class="card">
+    <div class="app-header">
+      <div>
+        <h1>&#x270F;&#xFE0F; Editor de Exámenes</h1>
+        <p>Crea o edita un examen tipo test y expórtalo como HTML listo para usar.</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn-ghost" onclick="document.getElementById('importFile').click()">&#x1F4C2; Cargar examen</button>
+        <input type="file" id="importFile" accept=".html" style="display:none" onchange="importExam(this)">
+        <button class="btn-success" onclick="openExportModal()">&#x1F4E5; Exportar examen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIGURACIÓN -->
+  <div class="card section">
+    <div class="section-title">Configuración general</div>
+    <div class="grid2" style="gap:18px;">
+      <div style="display:grid;gap:12px;">
+        <div class="field">
+          <label>Título del examen</label>
+          <textarea id="cfgTitulo" rows="3" placeholder="Prueba Final&#10;Nombre del curso"></textarea>
+        </div>
+      </div>
+      <div style="display:grid;gap:14px;">
+        <div class="field">
+          <label>Logo izquierdo</label>
+          <div class="logo-zone">
+            <div class="logo-preview" id="previewLeft"><span>Sin imagen</span></div>
+            <div style="display:grid;gap:6px;flex:1;">
+              <button class="btn-ghost btn-sm" onclick="document.getElementById('fileLeft').click()">&#x1F5BC;&#xFE0F; Seleccionar imagen</button>
+              <input type="file" id="fileLeft" accept="image/*" style="display:none" onchange="loadLogo(this,'left')">
+              <button class="btn-ghost btn-sm" onclick="clearLogo('left')">Eliminar</button>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Logo derecho</label>
+          <div class="logo-zone">
+            <div class="logo-preview" id="previewRight"><span>Sin imagen</span></div>
+            <div style="display:grid;gap:6px;flex:1;">
+              <button class="btn-ghost btn-sm" onclick="document.getElementById('fileRight').click()">&#x1F5BC;&#xFE0F; Seleccionar imagen</button>
+              <input type="file" id="fileRight" accept="image/*" style="display:none" onchange="loadLogo(this,'right')">
+              <button class="btn-ghost btn-sm" onclick="clearLogo('right')">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAMPOS DEL ALUMNO -->
+  <div class="card section">
+    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Campos del alumno/a</span>
+      <button class="btn-primary btn-sm" onclick="addCustomField()">+ Añadir campo</button>
+    </div>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px;">
+      Activa los campos que quieres mostrar en el examen y marca cuáles son obligatorios.
+      Los campos personalizados solo admiten caracteres alfanuméricos en su nombre.
+    </p>
+    <div class="fields-list" id="fieldsList"></div>
+  </div>
+
+  <!-- PREGUNTAS -->
+  <div class="card section">
+    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Preguntas (<span id="qCount">0</span>)</span>
+      <button class="btn-primary btn-sm" onclick="addQuestion()">+ Añadir pregunta</button>
+    </div>
+    <div class="q-list" id="qList"></div>
+    <div style="margin-top:14px;">
+      <button class="btn-primary btn-sm" onclick="addQuestion()">+ Añadir pregunta</button>
+    </div>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="card section">
+    <div class="section-title">Exportar</div>
+    <div class="btn-row">
+      <button class="btn-success" onclick="openExportModal()">&#x1F4E5; Exportar examen</button>
+      <span style="font-size:0.82rem;color:var(--muted);">Genera un único archivo HTML listo para distribuir y abrir en cualquier navegador.</span>
+    </div>
+  </div>
+
+</main>
+<!-- MODAL NOMBRE ARCHIVO -->
+<div class="modal-overlay" id="exportModal" onclick="handleModalOverlayClick(event)">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">&#x1F4BE; Exportar examen</h2>
+    <p>Introduce el nombre del archivo. Se guardará con extensión <strong>.html</strong>.</p>
+    <div class="modal-input-row">
+      <input type="text" id="exportFileName" placeholder="examen" maxlength="80"
+        onkeydown="if(event.key==='Enter')confirmExport();if(event.key==='Escape')closeExportModal()">
+      <span>.html</span>
+    </div>
+    <div class="modal-btn-row">
+      <button class="btn-ghost" onclick="closeExportModal()">Cancelar</button>
+      <button class="btn-success" onclick="confirmExport()">&#x1F4E5; Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="toast"></div>
+
+<script>
+/* ── Campos predefinidos ───────────────────────────────── */
+const PRESET_FIELDS = [
+  { id:'fNombre',    label:'Nombre',             enabled:true,  required:true,  removable:false, validate:null },
+  { id:'fApellidos', label:'Apellidos',           enabled:true,  required:true,  removable:false, validate:null },
+  { id:'fDNI',       label:'DNI',                 enabled:false, required:false, removable:false, validate:'dni' },
+  { id:'fEmail',     label:'Correo electrónico',  enabled:false, required:false, removable:false, validate:'email' },
+];
+
+/* ── Estado global ─────────────────────────────────────── */
+let state = {
+  titulo: '',
+  logoLeft: '',
+  logoRight: '',
+  campos: JSON.parse(JSON.stringify(PRESET_FIELDS)),
+  preguntas: []
+};
+let _customCounter = 0;
+
+/* ── Toast ─────────────────────────────────────────────── */
+function toast(msg, dur=2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+/* ── Logos ─────────────────────────────────────────────── */
+function loadLogo(input, side) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (side === 'left')  { state.logoLeft  = e.target.result; renderLogoPreview('left',  e.target.result); }
+    if (side === 'right') { state.logoRight = e.target.result; renderLogoPreview('right', e.target.result); }
+    toast('Logo cargado correctamente.');
+  };
+  reader.readAsDataURL(file);
+}
+function renderLogoPreview(side, src) {
+  const el = document.getElementById(side === 'left' ? 'previewLeft' : 'previewRight');
+  el.innerHTML = src ? `<img src="${src}" alt="logo">` : '<span>Sin imagen</span>';
+}
+function clearLogo(side) {
+  if (side === 'left')  { state.logoLeft  = ''; renderLogoPreview('left',  ''); }
+  if (side === 'right') { state.logoRight = ''; renderLogoPreview('right', ''); }
+}
+
+/* ── Campos del alumno ─────────────────────────────────── */
+function renderFieldsList() {
+  const list = document.getElementById('fieldsList');
+  list.innerHTML = '';
+  state.campos.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'field-row' + (f.enabled ? '' : ' disabled-row');
+
+    // Nombre del campo
+    let nameHtml;
+    if (f.removable) {
+      nameHtml = `<div class="field-name">
+        <input class="field-name-input" type="text" value="${escAttr(f.label)}"
+          placeholder="Nombre del campo"
+          oninput="onCustomLabelInput(${i}, this)"
+          maxlength="40">
+        <div style="font-size:.7rem;color:var(--muted);margin-top:2px;">Solo caracteres alfanuméricos</div>
+      </div>`;
+    } else {
+      nameHtml = `<div class="field-name">${escHTML(f.label)}${f.validate ? `<span style="font-size:.7rem;color:var(--muted);margin-left:6px;">(con validación)</span>` : ''}</div>`;
+    }
+
+    const badgeHtml = f.removable ? `<span class="custom-badge">CUSTOM</span>` : '';
+
+    const reqDisabled = f.enabled ? '' : 'disabled';
+    const reqOpacity  = f.enabled ? '' : 'style="opacity:.4;pointer-events:none"';
+
+    row.innerHTML = `
+      ${nameHtml}
+      ${badgeHtml}
+      <label class="field-toggle">
+        <input type="checkbox" ${f.enabled ? 'checked' : ''} onchange="toggleCampo(${i}, this.checked)">
+        Activo
+      </label>
+      <label class="field-req" ${reqOpacity}>
+        <input type="checkbox" ${f.required ? 'checked' : ''} ${reqDisabled} onchange="state.campos[${i}].required = this.checked">
+        Obligatorio
+      </label>
+      ${f.removable ? `<button class="opt-del" title="Eliminar campo" onclick="removeCustomField(${i})">&#x2715;</button>` : ''}
+    `;
+    list.appendChild(row);
+  });
+}
+
+function onCustomLabelInput(i, input) {
+  // Solo alfanuméricos + espacios + vocales acentuadas + ñ
+  const clean = input.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚüÜñÑ ]/g, '');
+  if (input.value !== clean) input.value = clean;
+  state.campos[i].label = clean;
+}
+
+function toggleCampo(i, enabled) {
+  state.campos[i].enabled = enabled;
+  if (!enabled) state.campos[i].required = false;
+  renderFieldsList();
+}
+
+function addCustomField() {
+  _customCounter++;
+  state.campos.push({
+    id: 'fCustom' + _customCounter,
+    label: '',
+    enabled: true,
+    required: false,
+    removable: true,
+    validate: null
+  });
+  renderFieldsList();
+  const inputs = document.querySelectorAll('.field-name-input');
+  if (inputs.length) inputs[inputs.length - 1].focus();
+}
+
+function removeCustomField(i) {
+  state.campos.splice(i, 1);
+  renderFieldsList();
+}
+
+/* ── Preguntas ─────────────────────────────────────────── */
+function addQuestion(data) {
+  const q = data || { q:'', opts:['','','',''], correcta:'a' };
+  state.preguntas.push(q);
+  renderQuestion(state.preguntas.length - 1);
+  updateQCount();
+}
+
+function removeQuestion(i) {
+  if (!confirm('¿Eliminar esta pregunta?')) return;
+  state.preguntas.splice(i, 1);
+  renderAllQuestions();
+}
+
+function addOption(i) {
+  if (state.preguntas[i].opts.length >= 6) { toast('Máximo 6 opciones por pregunta.'); return; }
+  state.preguntas[i].opts.push('');
+  renderAllQuestions();
+}
+
+function removeOption(qi, oi) {
+  if (state.preguntas[qi].opts.length <= 2) { toast('Mínimo 2 opciones por pregunta.'); return; }
+  const letter = String.fromCharCode(97 + oi);
+  if (state.preguntas[qi].correcta === letter) state.preguntas[qi].correcta = 'a';
+  state.preguntas[qi].opts.splice(oi, 1);
+  renderAllQuestions();
+}
+
+function syncQuestion(i) {
+  const qEl = document.getElementById(`q-text-${i}`);
+  if (qEl) state.preguntas[i].q = qEl.value;
+  state.preguntas[i].opts.forEach((_, j) => {
+    const oEl = document.getElementById(`opt-${i}-${j}`);
+    if (oEl) state.preguntas[i].opts[j] = oEl.value;
+  });
+}
+
+function setCorrect(qi, letter) {
+  syncQuestion(qi);
+  state.preguntas[qi].correcta = letter;
+}
+
+function toggleCollapse(i) {
+  const body = document.getElementById(`q-body-${i}`);
+  const chev = document.getElementById(`q-chev-${i}`);
+  body.classList.toggle('collapsed');
+  chev.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+}
+
+function renderQuestion(i) {
+  const list = document.getElementById('qList');
+  const p = state.preguntas[i];
+  let el = document.getElementById(`q-card-${i}`);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = `q-card-${i}`;
+    el.className = 'q-card';
+    list.appendChild(el);
+  }
+  const optsHtml = p.opts.map((o, j) => {
+    const letter = String.fromCharCode(97 + j);
+    const isCorrect = p.correcta === letter;
+    return `<div class="opt-row">
+      <span class="opt-letter">${letter})</span>
+      <input type="text" id="opt-${i}-${j}" value="${escAttr(o)}" placeholder="Opción ${letter}"
+        oninput="state.preguntas[${i}].opts[${j}]=this.value">
+      <input type="radio" class="opt-correct" name="correct-${i}" value="${letter}"
+        title="Marcar como correcta" ${isCorrect ? 'checked' : ''} onchange="setCorrect(${i},'${letter}')">
+      <button class="opt-del" title="Eliminar opción" onclick="removeOption(${i},${j})">&#x2715;</button>
+    </div>`;
+  }).join('');
+  const summary = p.q.trim() ? p.q.substring(0, 80) + (p.q.length > 80 ? '…' : '') : '(Sin texto)';
+  el.innerHTML = `
+    <div class="q-head" onclick="toggleCollapse(${i})">
+      <div class="q-head-left">
+        <span class="q-num">${i + 1}</span>
+        <span class="q-summary" id="q-sum-${i}">${escHTML(summary)}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-ghost btn-sm" style="padding:4px 10px;" onclick="event.stopPropagation();moveQ(${i},-1)" title="Subir">&#x2191;</button>
+        <button class="btn-ghost btn-sm" style="padding:4px 10px;" onclick="event.stopPropagation();moveQ(${i},1)" title="Bajar">&#x2193;</button>
+        <button class="btn-danger btn-sm" onclick="event.stopPropagation();removeQuestion(${i})">&#x1F5D1;</button>
+        <span class="q-chevron" id="q-chev-${i}">&#x25BE;</span>
+      </div>
+    </div>
+    <div class="q-body" id="q-body-${i}">
+      <div class="field">
+        <label>Enunciado de la pregunta</label>
+        <textarea id="q-text-${i}" rows="3" placeholder="Escribe el enunciado…"
+          oninput="state.preguntas[${i}].q=this.value;document.getElementById('q-sum-${i}').textContent=this.value.substring(0,80)||(this.value.length>80?'…':'')">${escHTML(p.q)}</textarea>
+      </div>
+      <div>
+        <label style="font-size:0.82rem;font-weight:700;color:var(--muted);display:block;margin-bottom:8px;">
+          Opciones &nbsp;<span class="correct-hint">(marca el círculo de la respuesta correcta)</span>
+        </label>
+        <div class="opts-list">${optsHtml}</div>
+        <button class="btn-ghost btn-sm" style="margin-top:8px;" onclick="addOption(${i})">+ Añadir opción</button>
+      </div>
+    </div>`;
+}
+
+function renderAllQuestions() {
+  document.getElementById('qList').innerHTML = '';
+  state.preguntas.forEach((_, i) => renderQuestion(i));
+  updateQCount();
+}
+
+function updateQCount() {
+  document.getElementById('qCount').textContent = state.preguntas.length;
+}
+
+function moveQ(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= state.preguntas.length) return;
+  [state.preguntas[i], state.preguntas[j]] = [state.preguntas[j], state.preguntas[i]];
+  renderAllQuestions();
+}
+
+/* ── Importar examen.html ──────────────────────────────── */
+function importExam(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const html = e.target.result;
+      const match = html.match(/const EXAM_DATA\s*=\s*(\{[\s\S]*?\});\s*\ninitExam/);
+      if (!match) throw new Error('No se encontró EXAM_DATA en el archivo.');
+      const cfg = JSON.parse(match[1]);
+
+      state.titulo    = cfg.titulo || '';
+      state.logoLeft  = cfg.logo_izquierdo || '';
+      state.logoRight = cfg.logo_derecho   || '';
+
+      // Restaurar campos
+      if (cfg.campos && cfg.campos.length) {
+        const base = JSON.parse(JSON.stringify(PRESET_FIELDS));
+        base.forEach(b => b.enabled = false);
+        const customFields = [];
+        cfg.campos.forEach(fc => {
+          const preset = base.find(b => b.id === fc.id);
+          if (preset) {
+            preset.enabled  = true;
+            preset.required = fc.required;
+          } else {
+            _customCounter++;
+            customFields.push({ id: fc.id, label: fc.label, enabled: true, required: fc.required, removable: true, validate: null });
+          }
+        });
+        state.campos = [...base, ...customFields];
+      } else {
+        state.campos = JSON.parse(JSON.stringify(PRESET_FIELDS));
+      }
+
+      // Desofuscar respuestas
+      state.preguntas = cfg.preguntas.map((p, i) => ({
+        q: p.q,
+        opts: p.opts,
+        correcta: decode(p._k, i)
+      }));
+
+      document.getElementById('cfgTitulo').value = state.titulo;
+      renderLogoPreview('left',  state.logoLeft);
+      renderLogoPreview('right', state.logoRight);
+      renderFieldsList();
+      renderAllQuestions();
+      toast(`✓ Examen cargado: ${state.preguntas.length} preguntas.`);
+    } catch(err) {
+      toast('❌ Error al leer el archivo: ' + err.message, 4000);
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+  input.value = '';
+}
+
+/* ── Ofuscación ────────────────────────────────────────── */
+function encode(letter, i) {
+  const byte = letter.toLowerCase().charCodeAt(0) ^ (i + 7);
+  return btoa(String.fromCharCode(byte));
+}
+function decode(k, i) {
+  return String.fromCharCode(atob(k).charCodeAt(0) ^ (i + 7));
+}
+
+/* ── Modal de exportación ──────────────────────────────── */
+function openExportModal() {
+  // Validaciones previas antes de abrir el modal
+  state.titulo = document.getElementById('cfgTitulo').value;
+  state.preguntas.forEach((_, i) => syncQuestion(i));
+
+  if (!state.titulo.trim())         { toast('❌ El título no puede estar vacío.'); return; }
+  if (state.preguntas.length === 0) { toast('❌ Añade al menos una pregunta.');    return; }
+  const activeCampos = state.campos.filter(f => f.enabled);
+  if (activeCampos.length === 0)    { toast('❌ Debes tener al menos un campo activo.'); return; }
+  for (const f of activeCampos) {
+    if (f.removable && !f.label.trim()) { toast('❌ Los campos personalizados activos deben tener nombre.'); return; }
+  }
+  for (let i = 0; i < state.preguntas.length; i++) {
+    const p = state.preguntas[i];
+    if (!p.q.trim())                 { toast(`❌ La pregunta ${i+1} no tiene enunciado.`);    return; }
+    if (p.opts.some(o => !o.trim())) { toast(`❌ La pregunta ${i+1} tiene opciones vacías.`); return; }
+  }
+
+  // Sugerir nombre basado en el título
+  const suggested = state.titulo.trim().split('\n')[0]
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9 _-]/g,'').trim().replace(/\s+/g,'-').toLowerCase()
+    || 'examen';
+  document.getElementById('exportFileName').value = suggested;
+  document.getElementById('exportModal').classList.add('open');
+  setTimeout(() => {
+    const inp = document.getElementById('exportFileName');
+    inp.focus(); inp.select();
+  }, 80);
+}
+
+function closeExportModal() {
+  document.getElementById('exportModal').classList.remove('open');
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('exportModal')) closeExportModal();
+}
+
+function confirmExport() {
+  let name = document.getElementById('exportFileName').value.trim();
+  if (!name) { document.getElementById('exportFileName').focus(); return; }
+  // Sanear nombre: solo alfanuméricos, guiones y guiones bajos
+  name = name.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚüÜñÑ _-]/g, '').trim() || 'examen';
+  closeExportModal();
+  exportExam(name);
+}
+
+/* ── Exportar ──────────────────────────────────────────── */
+function exportExam(fileName) {
+  state.titulo = document.getElementById('cfgTitulo').value;
+  state.preguntas.forEach((_, i) => syncQuestion(i));
+
+  const activeCampos = state.campos.filter(f => f.enabled);
+
+  const cfg = {
+    titulo:         state.titulo,
+    logo_izquierdo: state.logoLeft  || '',
+    logo_derecho:   state.logoRight || '',
+    campos: activeCampos.map(f => ({
+      id:       f.id,
+      label:    f.label,
+      required: f.required,
+      validate: f.validate || null
+    })),
+    preguntas: state.preguntas.map((p, i) => ({
+      q:    p.q,
+      opts: p.opts,
+      _k:   encode(p.correcta, i)
+    }))
+  };
+
+  const jsonStr = JSON.stringify(cfg, null, 2);
+  const fullHtml = ENGINE_TEMPLATE.replace('/*%%EXAM_DATA%%*/', `const EXAM_DATA = ${jsonStr};\ninitExam(EXAM_DATA);`);
+
+  const blob = new Blob([fullHtml], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (fileName || 'examen') + '.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('✓ Examen exportado correctamente.');
+}
+
+/* ── Utilidades ────────────────────────────────────────── */
+function escHTML(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+function escAttr(s){ return escHTML(s).replaceAll('"','&quot;'); }
+
+/* ── Inicialización ────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => renderFieldsList());
+
+/* ══════════════════════════════════════════════════════════
+   MOTOR DEL EXAMEN (plantilla incrustada)
+   ══════════════════════════════════════════════════════════ */
+const ENGINE_TEMPLATE = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Test autocorregible</title>
+  <style>
+    :root{--primary:#c8102e;--primary-dark:#a00d25;--line:#d0ccc7;--text:#1a1a1a;--muted:#5f5f5f;--surface:#fff;--surface-alt:#f5f3f0;--radius:10px;--shadow:0 6px 24px rgba(0,0,0,0.08);}
+    *{box-sizing:border-box;margin:0;padding:0;}html{scroll-behavior:smooth;}
+    body{font-family:Arial,sans-serif;background:#f0ede8;color:var(--text);font-size:16px;line-height:1.6;}
+    .page{width:min(900px,calc(100% - 16px));margin:16px auto;display:grid;gap:14px;}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
+    .header{padding:16px 20px 0 20px;border-bottom:3px solid var(--primary);}
+    .header-logos{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:14px;}
+    .header-logos img{height:70px;width:auto;object-fit:contain;flex-shrink:0;max-width:45%;}
+    .header-title{text-align:center;padding:12px 16px;border-top:1px solid var(--line);}
+    .header-title h1{font-size:1rem;font-weight:700;text-transform:uppercase;color:var(--primary);line-height:1.4;white-space:pre-line;}
+    .datos{padding:18px 20px;}.datos h2,.questions-wrap h2{font-size:.82rem;font-weight:700;margin-bottom:12px;color:#a00d25;letter-spacing:.04em;text-transform:uppercase;}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .field label{display:block;font-size:.82rem;font-weight:700;margin-bottom:5px;color:#5f5f5f;}
+    .field input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:8px;font-size:1rem;background:#faf9f7;transition:border-color .2s;-webkit-appearance:none;}
+    .field input:focus{outline:none;border-color:var(--primary);}
+    .field input.error{border-color:#c0392b;background:#fff5f5;}
+    .field .err-msg{font-size:.75rem;color:#c0392b;margin-top:4px;display:none;}
+    .field .err-msg.show{display:block;}
+    .layout{display:grid;grid-template-columns:1fr 250px;gap:14px;align-items:start;}
+    .questions-wrap{padding:18px 20px;display:grid;gap:14px;}
+    .question{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--surface-alt);}
+    .question-top{margin-bottom:10px;}.question-text{font-weight:600;font-size:.95rem;}
+    .options{display:grid;gap:8px;}
+    .option{display:flex;gap:12px;align-items:center;padding:12px 13px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;transition:border-color .15s,background .15s;-webkit-tap-highlight-color:transparent;min-height:48px;}
+    .option:hover,.option:active{border-color:var(--primary);background:#fdf0f2;}
+    .option input{width:20px;height:20px;flex-shrink:0;accent-color:var(--primary);cursor:pointer;}
+    .option span{font-size:.95rem;line-height:1.4;}
+    .sidebar{padding:16px;display:grid;gap:12px;position:sticky;top:14px;}
+    .sidebar h2{font-size:.82rem;font-weight:700;color:#a00d25;text-transform:uppercase;}
+    .progress-box{background:var(--surface-alt);border:1px solid var(--line);border-radius:8px;padding:12px;}
+    .progress-label{display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:8px;}
+    .progress-bar-wrap{height:10px;border-radius:999px;background:#e0d9d2;overflow:hidden;}
+    .progress-bar{height:100%;background:var(--primary);transition:width .2s;border-radius:999px;}
+    button{width:100%;border:0;border-radius:8px;padding:14px;font-weight:700;font-size:1rem;cursor:pointer;min-height:48px;touch-action:manipulation;}
+    .btn-primary{background:var(--primary);color:#fff;}.btn-primary:hover:not(:disabled),.btn-primary:active:not(:disabled){background:var(--primary-dark);}
+    .btn-primary:disabled{background:#c0b5b5;cursor:not-allowed;}
+    .btn-secondary{background:#ede8e2;color:var(--text);border:1px solid var(--line);margin-top:6px;}
+    .result{display:none;padding:20px;}.result.visible{display:block;}
+    .result-header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--line);padding-bottom:10px;margin-bottom:12px;gap:12px;}
+    .result-header h1{font-size:.9rem;color:var(--primary);text-transform:uppercase;white-space:pre-line;}
+    .score-box{background:#f9eaed;border:1px solid #e8b4be;border-radius:10px;padding:10px 14px;text-align:center;min-width:110px;flex-shrink:0;}
+    .score-box strong{display:block;font-size:1.8rem;color:var(--primary);line-height:1.1;}
+    .alumno-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px;}
+    .alumno-grid div{background:#f5f3f0;border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:.82rem;}
+    .alumno-grid div strong{display:block;color:var(--muted);font-size:.7rem;text-transform:uppercase;margin-bottom:2px;}
+    table{width:100%;border-collapse:collapse;font-size:.82rem;}
+    th,td{border:1px solid var(--line);padding:8px;vertical-align:top;text-align:left;}
+    th{background:#f2eee8;font-size:.76rem;font-weight:700;}
+    .tag-ok{display:inline-block;background:#d4edda;color:#1a5c2a;border-radius:999px;padding:3px 9px;font-weight:700;font-size:.75rem;}
+    .tag-ko{display:inline-block;background:#f8d7da;color:#7a1a26;border-radius:999px;padding:3px 9px;font-weight:700;font-size:.75rem;}
+    .tag-na{display:inline-block;background:#fff3cd;color:#6b4700;border-radius:999px;padding:3px 9px;font-weight:700;font-size:.75rem;}
+    .print-tools{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;}
+    .print-tools button{width:auto;padding:12px 20px;}
+    .footer-print{margin-top:10px;text-align:right;color:var(--muted);font-size:.75rem;}
+    @media(max-width:700px){body{font-size:15px;}.page{width:calc(100% - 12px);margin:6px auto;gap:10px;}
+      .header-logos img{height:52px;}.header-title h1{font-size:.88rem;}.form-grid{grid-template-columns:1fr;}
+      .layout{grid-template-columns:1fr;}.sidebar{position:static;}.alumno-grid{grid-template-columns:1fr 1fr;}
+      .result-header{flex-direction:column;align-items:flex-start;}.score-box{width:100%;}table{font-size:.75rem;}th,td{padding:6px;}}
+    @media print{@page{size:A4;margin:10mm;}body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      .page{width:100%;margin:0;gap:0;}.layout,.sidebar,.card:not(.result){display:none!important;}
+      .result{display:block!important;padding:0;border:0;box-shadow:none;font-size:8px;}
+      .result-header{padding-bottom:5px;margin-bottom:7px;flex-direction:row;align-items:center;}
+      .result-header h1{font-size:.78rem;}.score-box{padding:4px 10px;min-width:85px;width:auto;}.score-box strong{font-size:1rem;}
+      .alumno-grid{gap:4px;margin-bottom:7px;grid-template-columns:repeat(3,1fr);}.alumno-grid div{padding:4px 6px;}
+      th,td{padding:3px 5px;font-size:7.5px;}.tag-ok,.tag-ko,.tag-na{padding:1px 5px;font-size:7px;}
+      .print-tools{display:none!important;}.footer-print{margin-top:7px;font-size:7px;}tr{page-break-inside:avoid;}}
+  </style>
+</head>
+<body>
+<main class="page" id="app"></main>
+<script>
+function escHTML(s){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
+function validarDNI(d){const L='TRWAGMYFPDXBNJZSQVHLCKE';if(!/^\\d{8}[A-Za-z]$/.test(d))return false;return d[8].toUpperCase()===L[parseInt(d.slice(0,8))%23];}
+function validarEmail(e){return/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(e);}
+function decode(k,i){return String.fromCharCode(atob(k).charCodeAt(0)^(i+7));}
+function initExam(cfg){
+  const app=document.getElementById('app');
+  const preguntas=cfg.preguntas;
+  const campos=cfg.campos||[{id:'fNombre',label:'Nombre',required:true,validate:null},{id:'fApellidos',label:'Apellidos',required:true,validate:null}];
+  const answerMap=preguntas.map((p,i)=>'abcd'.indexOf(decode(p._k,i)));
+  const TOTAL=preguntas.length;
+  let corrected=false;
+  document.title=cfg.titulo.replace('\\n',' \\u2013 ');
+  const logosHtml=(cfg.logo_izquierdo||cfg.logo_derecho)?
+    \`<div class="header-logos">\${cfg.logo_izquierdo?'<img src="'+cfg.logo_izquierdo+'" alt="Logo izquierdo">':''}\${cfg.logo_derecho?'<img src="'+cfg.logo_derecho+'" alt="Logo derecho">':''}</div>\`:'';
+
+  // Generar campos del formulario dinámicamente
+  const formFieldsHtml=campos.map(f=>{
+    const reqMark=f.required?' *':'';
+    const errMsg=f.validate==='dni'?'DNI no v\\u00e1lido':f.validate==='email'?'Correo no v\\u00e1lido':'Campo obligatorio';
+    const inputType=f.validate==='email'?'email':'text';
+    const extraAttrs=f.validate==='dni'?' maxlength="9" inputmode="text"':f.validate==='email'?' inputmode="email"':'';
+    return \`<div class="field"><label for="\${f.id}">\${escHTML(f.label)}\${reqMark}</label>
+      <input id="\${f.id}" type="\${inputType}" placeholder="\${escHTML(f.label)}"\${extraAttrs}>
+      <div class="err-msg" id="e_\${f.id}">\${errMsg}</div></div>\`;
+  }).join('');
+
+  app.innerHTML=\`
+    <div class="card"><div class="header">\${logosHtml}<div class="header-title"><h1>\${escHTML(cfg.titulo)}</h1></div></div></div>
+    <div class="card datos" id="datosCard"><h2>Datos del alumno/a</h2><div class="form-grid">\${formFieldsHtml}</div></div>
+    <div class="layout">
+      <div class="card questions-wrap" id="questionsContainer"><h2>Cuestionario</h2></div>
+      <aside class="card sidebar"><h2>Estado</h2>
+        <div class="progress-box"><div class="progress-label"><span>Respondidas</span><span><span id="answeredCount">0</span>&nbsp;/&nbsp;\${TOTAL}</span></div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div></div>
+        <button class="btn-primary" id="gradeBtn" disabled>Corregir autom\\u00e1ticamente</button>
+        <button class="btn-secondary" id="resetBtn">Reiniciar</button>
+      </aside>
+    </div>
+    <div class="card result" id="resultSection"></div>\`;
+
+  const container=document.getElementById('questionsContainer');
+  const frag=document.createDocumentFragment();
+  preguntas.forEach((item,i)=>{
+    const art=document.createElement('article');art.className='question';
+    art.innerHTML=\`<div class="question-top"><span class="question-text">\${i+1}. \${escHTML(item.q)}</span></div>
+      <div class="options" role="radiogroup">\${item.opts.map((o,j)=>\`<label class="option"><input type="radio" name="q\${i}" value="\${j}"><span><strong>\${String.fromCharCode(97+j)})</strong> \${escHTML(o)}</span></label>\`).join('')}</div>\`;
+    frag.appendChild(art);
+  });
+  container.appendChild(frag);
+
+  const answeredEl=document.getElementById('answeredCount'),bar=document.getElementById('progressBar');
+  const gradeBtn=document.getElementById('gradeBtn'),resetBtn=document.getElementById('resetBtn');
+  const resultSection=document.getElementById('resultSection');
+
+  function getAnswers(){return preguntas.map((_,i)=>{const s=document.querySelector(\`input[name="q\${i}"]:checked\`);return s?Number(s.value):null;});}
+  function updateProgress(){if(corrected)return;const done=getAnswers().filter(v=>v!==null).length;answeredEl.textContent=done;bar.style.width=\`\${(done/TOTAL)*100}%\`;gradeBtn.disabled=done!==TOTAL;}
+  container.addEventListener('change',updateProgress);updateProgress();
+
+  function validateForm(){
+    let ok=true;
+    campos.forEach(f=>{
+      if(!f.required)return;
+      const inp=document.getElementById(f.id);
+      const errEl=document.getElementById('e_'+f.id);
+      if(!inp||!errEl)return;
+      let valid=true;
+      if(f.validate==='dni') valid=validarDNI(inp.value.trim());
+      else if(f.validate==='email') valid=validarEmail(inp.value.trim());
+      else valid=inp.value.trim()!=='';
+      inp.classList.toggle('error',!valid);
+      errEl.classList.toggle('show',!valid);
+      if(!valid)ok=false;
+    });
+    return ok;
+  }
+
+  gradeBtn.addEventListener('click',()=>{
+    if(corrected)return;
+    if(!validateForm()){document.getElementById('datosCard').scrollIntoView({behavior:'smooth'});return;}
+    buildResult();
+  });
+  resetBtn.addEventListener('click',()=>{
+    if(corrected)return;
+    document.querySelectorAll('input[type="radio"]').forEach(r=>r.checked=false);
+    resultSection.classList.remove('visible');resultSection.innerHTML='';
+    updateProgress();window.scrollTo({top:0,behavior:'smooth'});
+  });
+
+  function buildResult(){
+    const answers=getAnswers();
+    const today=new Date().toLocaleDateString('es-ES');
+    let correctCount=0;
+    const rows=preguntas.map((item,i)=>{
+      const sel=answers[i],correct=answerMap[i],isOk=sel===correct;
+      if(isOk)correctCount++;
+      const selText=sel===null?'<span class="tag-na">Sin responder</span>':\`\${String.fromCharCode(97+sel)}) \${escHTML(item.opts[sel])}\`;
+      const tag=sel===null?'<span class="tag-na">No evaluada</span>':isOk?'<span class="tag-ok">\\u2713 Correcta</span>':'<span class="tag-ko">\\u2717 Incorrecta</span>';
+      return \`<tr><td style="text-align:center;white-space:nowrap">\${i+1}</td><td>\${escHTML(item.q)}</td><td>\${selText}</td><td style="white-space:nowrap">\${tag}</td></tr>\`;
+    }).join('');
+    const nota=((correctCount/TOTAL)*10).toFixed(2).replace(/\\.?0+$/,'');
+
+    // Datos del alumno dinámicos
+    const alumnoGrid=campos.map(f=>{
+      const inp=document.getElementById(f.id);
+      const val=inp?inp.value.trim():'';
+      return \`<div><strong>\${escHTML(f.label)}</strong>\${escHTML(val)}</div>\`;
+    }).join('');
+
+    resultSection.innerHTML=\`
+      <div class="result-header">
+        <div><h1>\${escHTML(cfg.titulo)}</h1><p style="color:var(--muted);font-size:.78rem;margin-top:3px">Resultados generados el \${today}</p></div>
+        <div class="score-box"><span style="font-size:.68rem;color:var(--muted);display:block">NOTA FINAL</span>
+          <strong>\${nota}<span style="font-size:1rem;font-weight:400">/10</span></strong>
+          <span style="font-size:.68rem;color:var(--muted);display:block">\${correctCount} de \${TOTAL} correctas</span></div>
+      </div>
+      <div class="alumno-grid">\${alumnoGrid}</div>
+      <table><thead><tr><th>N\\u00ba</th><th>Pregunta</th><th>Respuesta del alumno</th><th>Resultado</th></tr></thead><tbody>\${rows}</tbody></table>
+      <div class="print-tools"><button class="btn-primary" onclick="window.print()">&#x1F5A8;&#xFE0F; Imprimir / Guardar PDF</button></div>
+      <div class="footer-print"><span>Documento generado el \${today}</span></div>\`;
+    resultSection.classList.add('visible');
+    corrected=true;
+    document.querySelectorAll('input[type="radio"]').forEach(r=>r.disabled=true);
+    document.querySelectorAll('.field input').forEach(r=>r.disabled=true);
+    gradeBtn.disabled=true;gradeBtn.textContent='Examen ya corregido';
+    resetBtn.disabled=true;resetBtn.style.opacity='.4';
+    resultSection.scrollIntoView({behavior:'smooth'});
+  }
+}
+/*%%EXAM_DATA%%*/
+<\/script>
+</body>
+</html>`;
+</script>
+</body>
+</html>
