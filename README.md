@@ -17,3 +17,7 @@ El uso es muy intuitivo:
    - Al terminar de contestar, se podrá realizar la corrección del examen y su impresión o envío en formato PDF.
 
 Enlace: https://skymaker.github.io/TestCurso/editor-examenes.html
+
+Hay un editor especializado en preguntas para asignaturas con código fuente.
+
+Enlace: https://skymaker.github.io/TestCurso/editor_test_DAW.html
